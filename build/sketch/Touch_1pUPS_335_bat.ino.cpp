@@ -251,9 +251,9 @@ int MODBUS_CRC(unsigned char *auchMsg, int usDataLen);
 void setupWatchDog();
 #line 267 "C:\\DevWork\\4.IFTechWork\\1.p1pDisplay3Inch\\Touch_1pUPS_335_bat\\Touch_1pUPS_335_bat.ino"
 void WatchDogClear();
-#line 2739 "C:\\DevWork\\4.IFTechWork\\1.p1pDisplay3Inch\\Touch_1pUPS_335_bat\\Touch_1pUPS_335_bat.ino"
+#line 2744 "C:\\DevWork\\4.IFTechWork\\1.p1pDisplay3Inch\\Touch_1pUPS_335_bat\\Touch_1pUPS_335_bat.ino"
 void setup();
-#line 2872 "C:\\DevWork\\4.IFTechWork\\1.p1pDisplay3Inch\\Touch_1pUPS_335_bat\\Touch_1pUPS_335_bat.ino"
+#line 2867 "C:\\DevWork\\4.IFTechWork\\1.p1pDisplay3Inch\\Touch_1pUPS_335_bat\\Touch_1pUPS_335_bat.ino"
 void loop();
 #line 246 "C:\\DevWork\\4.IFTechWork\\1.p1pDisplay3Inch\\Touch_1pUPS_335_bat\\Touch_1pUPS_335_bat.ino"
 int MODBUS_CRC(unsigned char *auchMsg, int usDataLen)
@@ -366,6 +366,7 @@ void tx_write()
 	Serial1.write(Scic_Tx_Frame_Buf, 11);
 	//		Serial1.flush();
 }
+//#define SCREEN_SAVER 600 
 void interrupt()
 {
 
@@ -397,13 +398,17 @@ void interrupt()
 	{
 		timer1000ms = 0;
 		dis_lock++;
-		if (dis_lock > 600)
+		#ifdef SCREEN_SAVER
+		if (dis_lock > SCREEN_SAVER)
 		{
-			if (dis_lock == 601)
+			if (dis_lock == SCREEN_SAVER + 1)
+			{
 				page_num = black;
+			}
 			if (dis_lock > 65000)
-				dis_lock = 602;
+				dis_lock = SCREEN_SAVER +2;
 		}
+		#endif
 	}
 }
 
@@ -2755,18 +2760,13 @@ void setup()
 	Serial1.begin(9600);
 	Serial.println("ok 1");
 	myGLCD.InitLCD();
-	Serial.println("ok 2");
 	myGLCD.clrScr();
-	Serial.println("ok 3");
 	rtc.begin();
-	Serial.println("ok 4");
 
 	pinMode(8, OUTPUT); // buzz
 	int eep_check = dueFlashStorage.read(4096);
-	Serial.println("ok 5");
 	if (eep_check = !4)
 	{
-		Serial.println("ok 6");
 		for (int eep_set = 0; eep_set < 4096; eep_set++)
 		{
 			dueFlashStorage.write(eep_set, 0);
@@ -2775,25 +2775,21 @@ void setup()
 		dueFlashStorage.write(4097, 0);
 		dueFlashStorage.write(4098, 0);
 	}
-	Serial.println("ok 7");
 	intro_type = dueFlashStorage.read(4098);
-	Serial.print("ok 8 intro_type=");
+	Serial.print("ok 2 intro_type=");
 	Serial.println(intro_type);
 	if((intro_type == 1) || (intro_type == 3)) {
 		// flash.begin() hangs if SPI flash is missing/busy (BUSY_TIMEOUT ~16 min).
 		// This sketch never uses flash after begin(); keep CS high so it stays off the SPI bus.
 		pinMode(87, OUTPUT);
 		digitalWrite(87, HIGH);
-		Serial.println("ok 9");
 		if (!sd.begin(SD_CHIP_SELECT, SPI_HALF_SPEED)) {
 			Serial.println("SD HALF fail, retry QUARTER");
 			if (!sd.begin(SD_CHIP_SELECT, SPI_QUARTER_SPEED)) {
 				Serial.println("SD begin fail");
 			}
 		}
-		Serial.println("ok 10");
 	}
-	Serial.println("ok 11");
 
 	myGLCD.fillScr(255, 255, 255);
 	myGLCD.setColor(0, 0, 0);
@@ -2801,7 +2797,6 @@ void setup()
 	myGLCD.setFont(BigFont);
 	myTouch.InitTouch();
 	myTouch.setPrecision(PREC_MEDIUM);
-	Serial.println("ok 6");
 	myGLCD.print("I", 40, 90);
 	delay(300);
 	myGLCD.print("F", 85, 90);
