@@ -163,51 +163,20 @@ C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\build\sketch\Touch
  C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\arduino_uip/utility/uip_clock.h \
  C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\arduino_uip/utility/clock-arch.h \
  C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\arduino_uip/UIPUDP.h \
- C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\SdFat\src/SdFat.h \
- C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\SdFat\src/SysCall.h \
- C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\SdFat\src/BlockDriver.h \
- C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\SdFat\src/FatLib/BaseBlockDriver.h \
- C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\SdFat\src/FatLib/FatLibConfig.h \
- C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\SdFat\src/SdFatConfig.h \
- C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\SdFat\src/SdCard/SdSpiCard.h \
- C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\SdFat\src/SysCall.h \
- C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\SdFat\src/SdCard/SdInfo.h \
- C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\SdFat\src/SdCard/../FatLib/BaseBlockDriver.h \
- C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\SdFat\src/SdCard/../SpiDriver/SdSpiDriver.h \
- C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\SdFat\src/SdCard/../SpiDriver/SdSpiBaseDriver.h \
- C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\SdFat\src/FatLib/FatLib.h \
- C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\SdFat\src/FatLib/ArduinoFiles.h \
- C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\SdFat\src/FatLib/FatFile.h \
- C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\SdFat\src/FatLib/FatApiConstants.h \
- C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\SdFat\src/FatLib/FatStructs.h \
- C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\SdFat\src/FatLib/FatVolume.h \
- C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\SdFat\src/BlockDriver.h \
- C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\SdFat\src/FatLib/ArduinoStream.h \
- C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\SdFat\src/FatLib/bufstream.h \
- C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\SdFat\src/FatLib/iostream.h \
- C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\SdFat\src/FatLib/istream.h \
- C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\SdFat\src/FatLib/ios.h \
- C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\SdFat\src/FatLib/ostream.h \
- C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\SdFat\src/FatLib/FatFileSystem.h \
- C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\SdFat\src/FatLib/StdioStream.h \
- C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\SdFat\src/FatLib/fstream.h \
- C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\SdFat\src/SdCard/SdioCard.h \
  C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\UTFT/UTFT.h \
  C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\UTFT/hardware/arm/HW_ARM_defines.h \
  C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\URTouch/URTouch.h \
  C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\URTouch/hardware/arm/HW_ARM_defines.h \
  C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\UTFT_Buttons/UTFT_Buttons.h \
- C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\UTFT_SdRaw\src/UTFT_SdRaw.h \
  C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\DueTimer/DueTimer.h \
  C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\RTCDue\src/RTCDue.h \
  C:\Users\ServerManager\AppData\Local\Arduino15\packages\arduino\hardware\sam\1.6.12\system/libsam/include/rtc.h \
- C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\SPIMemory\src/SPIMemory.h \
- C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\SPIMemory\src/defines.h \
- C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\SPIMemory\src/SPIFlash.h \
- C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\SPIMemory\src/SPIMemory.h \
- C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\SPIMemory\src/diagnostics.h \
- C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\SPIMemory\src/DMASAM.h \
  C:\Users\ServerManager\AppData\Local\Arduino15\packages\arduino\hardware\sam\1.6.12\cores\arduino/watchdog.cpp \
  C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\DueFlashStorage\src/DueFlashStorage.h \
  C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\DueFlashStorage\src/flash_efc.h \
- C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\DueFlashStorage\src/efc.h
+ C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\DueFlashStorage\src/efc.h \
+ C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\build\sketch\Storage.h \
+ C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\UTFT_FlashRaw/UTFT_FlashRaw.h \
+ C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\FlashImagePack/FlashImagePack.h \
+ C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\GD25Q80/GD25Q80.h \
+ C:\DevWork\4.IFTechWork\1.p1pDisplay3Inch\Touch_1pUPS_335_bat\libraries\SerialFlashUpload/SerialFlashUpload.h

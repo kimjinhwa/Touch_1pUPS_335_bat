@@ -8,6 +8,7 @@ git clone 후 OneDrive/스케치북 없이도 `..\compile.ps1` 로 빌드할 수
 - arduino_uip (UIPEthernet 2.0.6)
 - SdFat 1.0.6
 - UTFT, URTouch, UTFT_Buttons, UTFT_SdRaw 1.2.4
+- UTFT_FlashRaw, GD25Q80, FlashImagePack, SerialFlashUpload (AT25SF081 C1IM)
 - DueTimer 1.4.7
 - RTCDue 1.1.0
 - SPIMemory 3.2.1

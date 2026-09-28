@@ -3,17 +3,15 @@
 #include <SPI.h> // needed for Arduino versions later than 0018
 #include <UIPEthernet.h>
 #include <UIPUDP.h> // UDP library from: bjoern@cs.stanford.edu 12/30/2008
-#include <SdFat.h>
 #include <UTFT.h>
 #include <URTouch.h>
 #include <UTFT_Buttons.h>
-#include <UTFT_SdRaw.h>
 #include <DueTimer.h>
 #include <RTCDue.h>
-#include <SPIMemory.h>
 #include "watchdog.cpp"
 #include <DueFlashStorage.h>
 #include <math.h>
+#include "Storage.h"
 
 #if defined(__AVR__)
 #include <avr/pgmspace.h>
@@ -24,7 +22,6 @@
 #endif
 
 #define WDT_KEY (0xA5)
-#define SD_CHIP_SELECT 78 // SD chip select pin
 
 #define intro_set 0
 #define intro_set_i 100
@@ -114,20 +111,22 @@ void waitForIt(int x1, int y11, int x2, int y2);
 void ac_model(int x_line, int y_line);
 
 RTCDue rtc(XTAL);
-SdFat sd;
-ArduinoOutStream cout(Serial);
 
 DueFlashStorage dueFlashStorage;
 
-File myFile;
 // UTFT    myGLCD(TFT01_70,38,39,40,41);	//TFT set
 // UTFT    myGLCD(ITDB50,38,39,40,41);	//TFT set
 UTFT myGLCD(ILI9327, 38, 39, 40, 41); // TFT set
 URTouch myTouch(6, 5, 4, 3, 2);		  // Touch set
 
-SPIFlash flash(87);
-
+#ifdef USE_SPI_FLASH
+GD25Q80 extFlash(FLASH_CHIP_SELECT);
+FlashImagePack imagePack;
+UTFT_FlashRaw myFiles(&myGLCD, &imagePack);
+#else
+SdFat sd;
 UTFT_SdRaw myFiles(&myGLCD);
+#endif
 UTFT_Buttons myButtons(&myGLCD, &myTouch);
 
 /* Change these values to set the current initial time */
@@ -245,17 +244,17 @@ unsigned char auchCRCLo[] = {																  // Table of CRC values for low. o
 	0x44, 0x84, 0x85, 0x45, 0x87, 0x47, 0x46, 0x86, 0x82, 0x42, 0x43, 0x83, 0x41, 0x81, 0x80, // 240-254
 	0x40};
 
-#line 246 "C:\\DevWork\\4.IFTechWork\\1.p1pDisplay3Inch\\Touch_1pUPS_335_bat\\Touch_1pUPS_335_bat.ino"
+#line 245 "C:\\DevWork\\4.IFTechWork\\1.p1pDisplay3Inch\\Touch_1pUPS_335_bat\\Touch_1pUPS_335_bat.ino"
 int MODBUS_CRC(unsigned char *auchMsg, int usDataLen);
-#line 261 "C:\\DevWork\\4.IFTechWork\\1.p1pDisplay3Inch\\Touch_1pUPS_335_bat\\Touch_1pUPS_335_bat.ino"
+#line 260 "C:\\DevWork\\4.IFTechWork\\1.p1pDisplay3Inch\\Touch_1pUPS_335_bat\\Touch_1pUPS_335_bat.ino"
 void setupWatchDog();
-#line 267 "C:\\DevWork\\4.IFTechWork\\1.p1pDisplay3Inch\\Touch_1pUPS_335_bat\\Touch_1pUPS_335_bat.ino"
+#line 266 "C:\\DevWork\\4.IFTechWork\\1.p1pDisplay3Inch\\Touch_1pUPS_335_bat\\Touch_1pUPS_335_bat.ino"
 void WatchDogClear();
-#line 2744 "C:\\DevWork\\4.IFTechWork\\1.p1pDisplay3Inch\\Touch_1pUPS_335_bat\\Touch_1pUPS_335_bat.ino"
+#line 2903 "C:\\DevWork\\4.IFTechWork\\1.p1pDisplay3Inch\\Touch_1pUPS_335_bat\\Touch_1pUPS_335_bat.ino"
 void setup();
-#line 2867 "C:\\DevWork\\4.IFTechWork\\1.p1pDisplay3Inch\\Touch_1pUPS_335_bat\\Touch_1pUPS_335_bat.ino"
+#line 3027 "C:\\DevWork\\4.IFTechWork\\1.p1pDisplay3Inch\\Touch_1pUPS_335_bat\\Touch_1pUPS_335_bat.ino"
 void loop();
-#line 246 "C:\\DevWork\\4.IFTechWork\\1.p1pDisplay3Inch\\Touch_1pUPS_335_bat\\Touch_1pUPS_335_bat.ino"
+#line 245 "C:\\DevWork\\4.IFTechWork\\1.p1pDisplay3Inch\\Touch_1pUPS_335_bat\\Touch_1pUPS_335_bat.ino"
 int MODBUS_CRC(unsigned char *auchMsg, int usDataLen)
 {
 	unsigned char uchCRCHi = 0xFF; // high byte of CRC initialized
@@ -366,7 +365,7 @@ void tx_write()
 	Serial1.write(Scic_Tx_Frame_Buf, 11);
 	//		Serial1.flush();
 }
-//#define SCREEN_SAVER 600 
+#define SCREEN_SAVER 600 
 void interrupt()
 {
 
@@ -671,6 +670,15 @@ void touch_read()
 			break;
 		case secret1_i:
 			myGLCD.setColor(0, 0, 0);
+#ifdef USE_SPI_FLASH
+			if ((x >= 248) && (x <= 318) && (y >= 88) && (y <= 118))
+			{
+				waitForIt(248, 88, 318, 118);
+				storageEnterUploadMode();
+				page_num = secret1;
+				break;
+			}
+#endif
 			if ((x >= 20) && (x <= 150) && (y >= 30) && (y <= 87))
 			{
 				waitForIt(20, 30, 150, 87);
@@ -2754,10 +2762,171 @@ void ac_model(int x_line, int y_line)
 	myGLCD.fillRect((x_line - 5), (y_line + 2), (x_line + 4), (y_line + 5));
 	myGLCD.fillRect((x_line + 6), (y_line - 5), (x_line + 15), (y_line - 2));
 }
+
+#ifdef SERIAL_WIRE_TEST
+static uint32_t wireCrc32(const uint8_t *data, uint32_t len) {
+	uint32_t crc = 0xFFFFFFFFUL;
+	while (len--) {
+		crc ^= *data++;
+		for (uint8_t b = 0; b < 8; b++) {
+			if (crc & 1UL) {
+				crc = (crc >> 1) ^ 0xEDB88320UL;
+			} else {
+				crc >>= 1;
+			}
+		}
+	}
+	return ~crc;
+}
+
+static void serialWireTestForever() {
+	Serial.begin(115200);
+	delay(300);
+	Serial.println("WIRETEST READY 8N1 115200");
+	Serial.flush();
+
+	char cmd[48];
+	for (;;) {
+		uint8_t n = 0;
+		uint32_t start = millis();
+		while ((millis() - start) < 30000UL) {
+			if (!Serial.available()) {
+				continue;
+			}
+			char c = (char)Serial.read();
+			if (c == '\r') {
+				continue;
+			}
+			if (c == '\n') {
+				cmd[n] = 0;
+				break;
+			}
+			if (n < sizeof(cmd) - 1) {
+				cmd[n++] = c;
+			}
+			start = millis();
+		}
+		if (n == 0) {
+			Serial.println("WIRETEST READY 8N1 115200");
+			Serial.flush();
+			continue;
+		}
+
+		if (strcmp(cmd, "PING") == 0) {
+			Serial.println("PONG");
+			Serial.flush();
+			continue;
+		}
+
+		unsigned long want = 0;
+		if (sscanf(cmd, "BIN %lu", &want) != 1 || want == 0 || want > 4096UL) {
+			Serial.print("UNK ");
+			Serial.println(cmd);
+			Serial.flush();
+			continue;
+		}
+
+		uint16_t hist[256];
+		memset(hist, 0, sizeof(hist));
+		uint8_t head[16];
+		uint32_t got = 0;
+		uint32_t crc = 0xFFFFFFFFUL;
+		start = millis();
+		while (got < want && (millis() - start) < 8000UL) {
+			if (!Serial.available()) {
+				continue;
+			}
+			int v = Serial.read();
+			if (v < 0) {
+				continue;
+			}
+			uint8_t b = (uint8_t)v;
+			if (got < 16) {
+				head[got] = b;
+			}
+			hist[b]++;
+			crc ^= b;
+			for (uint8_t i = 0; i < 8; i++) {
+				if (crc & 1UL) {
+					crc = (crc >> 1) ^ 0xEDB88320UL;
+				} else {
+					crc >>= 1;
+				}
+			}
+			got++;
+			start = millis();
+		}
+		crc = ~crc;
+
+		Serial.print("GOT ");
+		Serial.print(got);
+		Serial.print(" WANT ");
+		Serial.println(want);
+		Serial.print("ZEROS ");
+		Serial.println(hist[0x00]);
+		Serial.print("X20 ");
+		Serial.println(hist[0x20]);
+		Serial.print("X40 ");
+		Serial.println(hist[0x40]);
+		Serial.print("X0A ");
+		Serial.println(hist[0x0A]);
+		Serial.print("X0D ");
+		Serial.println(hist[0x0D]);
+		Serial.print("XFF ");
+		Serial.println(hist[0xFF]);
+		Serial.print("CRC ");
+		Serial.println(crc);
+		Serial.print("HEAD");
+		uint32_t hlen = got < 16 ? got : 16;
+		for (uint32_t i = 0; i < hlen; i++) {
+			Serial.print(" ");
+			if (head[i] < 16) {
+				Serial.print('0');
+			}
+			Serial.print(head[i], HEX);
+		}
+		Serial.println();
+		Serial.print("BAD");
+		uint16_t bad = 0;
+		if (want == 256) {
+			for (uint16_t v = 0; v < 256; v++) {
+				if (hist[v] != 1) {
+					Serial.print(" ");
+					if (v < 16) {
+						Serial.print('0');
+					}
+					Serial.print(v, HEX);
+					Serial.print("=");
+					Serial.print(hist[v]);
+					bad++;
+				}
+			}
+		}
+		if (bad == 0) {
+			Serial.print(" none");
+		}
+		Serial.println();
+		Serial.println("END");
+		Serial.flush();
+		(void)wireCrc32;
+	}
+}
+#endif
+
 void setup()
 {
+#ifdef SERIAL_WIRE_TEST
+	serialWireTestForever();
+#endif
+#ifdef USE_SPI_FLASH
+	Serial.begin(115200);
+	Serial1.begin(9600);
+	delay(300);
+	storageBegin();
+#else
 	Serial.begin(9600);
 	Serial1.begin(9600);
+#endif
 	Serial.println("ok 1");
 	myGLCD.InitLCD();
 	myGLCD.clrScr();
@@ -2778,18 +2947,9 @@ void setup()
 	intro_type = dueFlashStorage.read(4098);
 	Serial.print("ok 2 intro_type=");
 	Serial.println(intro_type);
-	if((intro_type == 1) || (intro_type == 3)) {
-		// flash.begin() hangs if SPI flash is missing/busy (BUSY_TIMEOUT ~16 min).
-		// This sketch never uses flash after begin(); keep CS high so it stays off the SPI bus.
-		pinMode(87, OUTPUT);
-		digitalWrite(87, HIGH);
-		if (!sd.begin(SD_CHIP_SELECT, SPI_HALF_SPEED)) {
-			Serial.println("SD HALF fail, retry QUARTER");
-			if (!sd.begin(SD_CHIP_SELECT, SPI_QUARTER_SPEED)) {
-				Serial.println("SD begin fail");
-			}
-		}
-	}
+#ifndef USE_SPI_FLASH
+	storageBegin();
+#endif
 
 	myGLCD.fillScr(255, 255, 255);
 	myGLCD.setColor(0, 0, 0);
@@ -3808,6 +3968,12 @@ void loop()
 		myGLCD.print("A", 244, 36);
 		myGLCD.print("V", 104, 132);
 		myGLCD.print("A", 244, 132);
+#ifdef USE_SPI_FLASH
+		myGLCD.setFont(Retro);
+		myGLCD.setColor(255, 255, 255);
+		myGLCD.setBackColor(0, 80, 160);
+		myGLCD.print("IMG", 256, 94);
+#endif
 		page_num = secret1_i;
 		break;
 	case secret1_i:

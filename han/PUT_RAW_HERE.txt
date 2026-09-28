@@ -1,0 +1,13 @@
+이 폴더에 SD 카드와 같은 한글 RAW 를 둔다.
+
+펌웨어 경로 예:
+  han/alarm/in_cu.RAW
+  han/measure/input_m.RAW
+  han/control/esc.RAW
+  han/main/offset_btn.RAW
+
+업로드:
+  python tools\flash_upload\flash_upload.py
+  COM5 Serial 115200. 모니터는 닫고 GUI만.
+  펌웨어가 안 쓰는 이미지는 *.raw.notuse 로 두면 팩에 안 들어간다.
+  또는  .\compile.ps1 -Flavor flash -Upload
