@@ -79,12 +79,23 @@
 #define minute_keypad 85
 #define second_keypad 86
 
+#define HIST_REC 7
+#define HIST_MAX 500
+#define HIST_SPAN (HIST_REC * HIST_MAX)
+#define HIST_PAGE 4
+#define HIST_WRAP_ADDR 4093
+#define HIST_PTR_H 4094
+#define HIST_PTR_L 4095
+
 void tx_read();
 void alarm_tx();
 void data_tx();
 void tx_write();
 void interrupt();
 void touch_read();
+void histLoadPtr();
+int histCount();
+int histRecAddr(int fromNewest);
 void eeprom_history();
 void eeprom_write();
 void eeprom_set();
@@ -162,6 +173,8 @@ int y1_delete;
 int input_set_data, input_set_data_l, input_set_data_h, set_address;
 
 int eeprom_address, eeprom_address_h, eeprom_address_l, eeprom_plus;
+uint8_t hist_wrapped;
+int hist_view;
 
 int buzz_snmp = 0, buzz_snmp_old = 0;
 
@@ -352,7 +365,9 @@ void tx_write()
 	Serial1.write(Scic_Tx_Frame_Buf, 11);
 	//		Serial1.flush();
 }
-#define SCREEN_SAVER 600 
+#ifndef NO_SCREEN_SAVER
+#define SCREEN_SAVER 600
+#endif 
 void interrupt()
 {
 
@@ -657,15 +672,6 @@ void touch_read()
 			break;
 		case secret1_i:
 			myGLCD.setColor(0, 0, 0);
-#ifdef USE_SPI_FLASH
-			if ((x >= 248) && (x <= 318) && (y >= 88) && (y <= 118))
-			{
-				waitForIt(248, 88, 318, 118);
-				storageEnterUploadMode();
-				page_num = secret1;
-				break;
-			}
-#endif
 			if ((x >= 20) && (x <= 150) && (y >= 30) && (y <= 87))
 			{
 				waitForIt(20, 30, 150, 87);
@@ -773,8 +779,12 @@ void touch_read()
 			if ((y >= 0) && (y <= 10) && (x >= 0) && (x <= 10))
 			{
 				waitForIt(0, 0, 10, 10);
-				dueFlashStorage.write(4094, 0);
-				dueFlashStorage.write(4095, 0);
+				dueFlashStorage.write(HIST_WRAP_ADDR, 0);
+				dueFlashStorage.write(HIST_PTR_H, 0);
+				dueFlashStorage.write(HIST_PTR_L, 0);
+				hist_wrapped = 0;
+				eeprom_address = 0;
+				hist_view = 0;
 			}
 			//    	  		}
 			break;
@@ -1034,24 +1044,13 @@ void touch_read()
 			if ((y >= 200) && (y <= 238) && (x >= 81) && (x <= 159))
 			{
 				waitForIt(81, 200, 159, 238);
-				eeprom_plus = 0;
-				if (z == 0)
+				if (hist_view >= HIST_PAGE)
 				{
-					eeprom_plus = eeprom_address % 28;
-					if (eeprom_plus == 0)
-						z = z + 56 + eeprom_plus;
-					else
-						z = z + 28 + eeprom_plus;
-				}
-				else
-					z = z + 56 + eeprom_plus;
-				if (z < (eeprom_address + 1))
-				{
+					hist_view -= HIST_PAGE;
 					page_num = history_next;
 				}
 				else
 				{
-					z = eeprom_address - 28;
 					myGLCD.setColor(30, 30, 30);
 					myGLCD.drawRect(81, 200, 159, 238);
 				}
@@ -1059,9 +1058,10 @@ void touch_read()
 			if ((y >= 200) && (y <= 238) && (x >= 161) && (x <= 239))
 			{
 				waitForIt(161, 200, 239, 238);
-				if (z > 0)
+				histLoadPtr();
+				if (hist_view + HIST_PAGE < histCount())
 				{
-					//									z+=4;
+					hist_view += HIST_PAGE;
 					y11 = 12;
 					page_num = history_next;
 				}
@@ -1133,39 +1133,75 @@ void touch_read()
 		myTouch.InitTouch();
 	}
 }
+void histLoadPtr()
+{
+	eeprom_address_h = dueFlashStorage.read(HIST_PTR_H);
+	eeprom_address_l = dueFlashStorage.read(HIST_PTR_L);
+	eeprom_address = (eeprom_address_l & 0x00ff) | ((eeprom_address_h << 8) & 0xff00);
+	hist_wrapped = dueFlashStorage.read(HIST_WRAP_ADDR);
+	if (hist_wrapped != 1)
+		hist_wrapped = 0;
+	if (eeprom_address > (HIST_SPAN - 1))
+	{
+		eeprom_address = 0;
+		dueFlashStorage.write(HIST_PTR_H, 0);
+		dueFlashStorage.write(HIST_PTR_L, 0);
+	}
+}
+
+int histCount()
+{
+	if (hist_wrapped)
+		return HIST_MAX;
+	return eeprom_address / HIST_REC;
+}
+
+int histRecAddr(int fromNewest)
+{
+	int end = eeprom_address;
+	if ((end == 0) && hist_wrapped)
+		end = HIST_SPAN;
+	int addr = end - (fromNewest + 1) * HIST_REC;
+	if (addr < 0)
+		addr += HIST_SPAN;
+	return addr;
+}
+
 void eeprom_history()
 {
 
 	myGLCD.setFont(Retro);
 	myGLCD.setBackColor(255, 255, 255);
 	myGLCD.setColor(240, 10, 30);
-	if (z != 0)
+	int count = histCount();
+	for (int history_line = 0; history_line < HIST_PAGE; history_line++)
 	{
-		for (int history_line = 0; history_line < 4; history_line++)
+		int idx = hist_view + history_line;
+		if (idx >= count)
+			break;
 		{
-			if (z < (eeprom_address + 1))
-			{ 
+				int rec = histRecAddr(idx);
 				y11 += 22;
 				myGLCD.setColor(50, 50, 50);
-				see_eeprom = dueFlashStorage.read(z - 7);
+				see_eeprom = dueFlashStorage.read(rec);
 				see_eeprom += 2000;
 				myGLCD.print(String(see_eeprom), 5, y11);
 				myGLCD.print("/", 40, y11);
-				see_eeprom = dueFlashStorage.read(z - 6);
+				see_eeprom = dueFlashStorage.read(rec + 1);
 				myGLCD.print(String(see_eeprom), 50, y11);
 				myGLCD.print("/", 67, y11);
-				see_eeprom = dueFlashStorage.read(z - 5);
+				see_eeprom = dueFlashStorage.read(rec + 2);
 				myGLCD.print(String(see_eeprom), 80, y11);
 				myGLCD.print("/", 99, y11);
-				see_eeprom = dueFlashStorage.read(z - 4);
+				see_eeprom = dueFlashStorage.read(rec + 3);
 				myGLCD.print(String(see_eeprom), 127, y11);
 				myGLCD.print(":", 146, y11);
-				see_eeprom = dueFlashStorage.read(z - 3);
+				see_eeprom = dueFlashStorage.read(rec + 4);
 				myGLCD.print(String(see_eeprom), 154, y11);
 				myGLCD.print(":", 173, y11);
-				see_eeprom = dueFlashStorage.read(z - 2);
+				see_eeprom = dueFlashStorage.read(rec + 5);
 				myGLCD.print(String(see_eeprom), 181, y11);
-				see_eeprom = dueFlashStorage.read(z - 1);
+				see_eeprom = dueFlashStorage.read(rec + 6);
 				y11 += 20;
 
 				myGLCD.setColor(230, 0, 0);
@@ -1294,21 +1330,13 @@ void eeprom_history()
 					else if (see_eeprom == 29)
 						myGLCD.print("EEPROM Error", 20, y11);
 				}
-				z = z - 7;
-				if (z == 0)
-					break;
-				//						y11+=5
-			}
 		}
 	}
-	//	y11=18;
 	page_num = history_i;
 }
 void eeprom_write()
 {
-	eeprom_address_h = dueFlashStorage.read(4094);
-	eeprom_address_l = dueFlashStorage.read(4095);
-	eeprom_address = (eeprom_address_l & 0x00ff) | ((eeprom_address_h << 8) & 0xff00);
+	histLoadPtr();
 	dueFlashStorage.write(eeprom_address, (rtc_year - 2000));
 	dueFlashStorage.write(eeprom_address + 1, rtc_month);
 	dueFlashStorage.write(eeprom_address + 2, rtc_day);
@@ -1316,17 +1344,18 @@ void eeprom_write()
 	dueFlashStorage.write(eeprom_address + 4, rtc_minute);
 	dueFlashStorage.write(eeprom_address + 5, rtc_second);
 	dueFlashStorage.write(eeprom_address + 6, eeprom_data);
-	eeprom_address += 7;
+	eeprom_address += HIST_REC;
 
-	if (eeprom_address > 3499)
-	{ //||(eeprom_address==(EEPROM.length()-1))||(eeprom_address==EEPROM.length()-2) 500개
+	if (eeprom_address > (HIST_SPAN - 1))
+	{
 		eeprom_address = 0;
+		hist_wrapped = 1;
+		dueFlashStorage.write(HIST_WRAP_ADDR, 1);
 	}
 	eeprom_address_h = (eeprom_address >> 8) & 0xff;
 	eeprom_address_l = (eeprom_address & 0xff);
-	dueFlashStorage.write(4094, eeprom_address_h);
-	dueFlashStorage.write(4095, eeprom_address_l);
-	//	eeprom_address+=3;
+	dueFlashStorage.write(HIST_PTR_H, eeprom_address_h);
+	dueFlashStorage.write(HIST_PTR_L, eeprom_address_l);
 }
 void eeprom_set()
 {
@@ -3007,14 +3036,7 @@ void setup()
 	myGLCD.print("Y", 256, 160);
 	delay(1000);
 	myTouch.calibrateRead();
-	eeprom_address_h = dueFlashStorage.read(4094);
-	eeprom_address_l = dueFlashStorage.read(4095);
-	eeprom_address = (eeprom_address_l & 0x00ff) | ((eeprom_address_h << 8) & 0xff00);
-	if (eeprom_address > 3499)
-	{
-		dueFlashStorage.write(4094, 0);
-		dueFlashStorage.write(4095, 0);
-	}
+	histLoadPtr();
 	Serial.println("Serial bps 9600 start");
 	Timer3.attachInterrupt(interrupt).start(1000);
 	setupWatchDog();
@@ -3831,10 +3853,8 @@ void loop()
 		break;
 	case history:
 		background_history();
-		eeprom_address_h = dueFlashStorage.read(4094);
-		eeprom_address_l = dueFlashStorage.read(4095);
-		eeprom_address = (eeprom_address_l & 0x00ff) | ((eeprom_address_h << 8) & 0xff00);
-		z = eeprom_address;
+		histLoadPtr();
+		hist_view = 0;
 		myGLCD.setColor(255, 255, 255);
 		myGLCD.fillRect(0, 40, 319, 189);
 		y11 = 12;
@@ -3955,12 +3975,6 @@ void loop()
 		myGLCD.print("A", 244, 36);
 		myGLCD.print("V", 104, 132);
 		myGLCD.print("A", 244, 132);
-#ifdef USE_SPI_FLASH
-		myGLCD.setFont(Retro);
-		myGLCD.setColor(255, 255, 255);
-		myGLCD.setBackColor(0, 80, 160);
-		myGLCD.print("IMG", 256, 94);
-#endif
 		page_num = secret1_i;
 		break;
 	case secret1_i:

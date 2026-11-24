@@ -3,16 +3,17 @@
 #   bossac -i -d --port=COM5 -U false -e -w -b -v <bin> -R
 #
 #   .\compile.ps1                         # SD 버전 (기본)
-#   .\compile.ps1 -Flavor flash           # AT25SF081 버전
-#   .\compile.ps1 -Flavor flash -Upload   # 펌웨어만. 이미지는 이 스케치 GUI
+#   .\compile.ps1 -Flavor flash           # AT25SF081 절전 있음+없음 두 bin
+#   .\compile.ps1 -Flavor flash -Upload   # 절전 있음 bin 기록. 이미지는 GUI
 #   .\compile.ps1 -Flavor flash -Upload -SkipImages
 #   .\compile.ps1 -ListPorts
 #   .\compile.ps1 -Upload -Monitor
 #   .\compile.ps1 -Monitor
 #   .\compile.ps1 -Upload -Port COM7
 #
-# 이미지: 이 스케치 tools\flash_upload (charger_1 과 별개)
-#   python tools\flash_upload\flash_upload.py
+# 이미지 GUI 소스: tools\flash_upload
+# 펌웨어 담당자 배포: upload\ 만 복사 (upload.bat + flash_upload.exe)
+#   exe 다시 만들기: .\tools\flash_upload\build_exe.ps1
 #   COM5 Serial 115200. 모니터는 닫고 GUI만. 폴더는 han\
 
 param(
@@ -57,6 +58,57 @@ $BinName = "$SketchName.ino.bin"
 $FlavorBinName = "${SketchName}_${Flavor}.ino.bin"
 $HanDir = Join-Path $SketchDir "han"
 
+function Copy-RawTree([string]$From, [string]$To) {
+    New-Item -ItemType Directory -Force -Path $To | Out-Null
+    if (-not (Test-Path $From)) { return }
+    $root = (Resolve-Path $From).Path
+    Get-ChildItem $From -Recurse -File -Filter *.raw | ForEach-Object {
+        $rel = $_.FullName.Substring($root.Length).TrimStart("\", "/")
+        $dest = Join-Path $To $rel
+        New-Item -ItemType Directory -Force -Path (Split-Path $dest) | Out-Null
+        Copy-Item $_.FullName $dest -Force
+    }
+}
+
+function Sync-FirmwareKit {
+    $srcGui = Join-Path $SketchDir "tools\flash_upload"
+    $dstGui = Join-Path $UploadDir "flash_upload"
+    New-Item -ItemType Directory -Force -Path $dstGui | Out-Null
+    foreach ($name in @(
+        "flash_upload.py",
+        "flash_upload_espprog.py",
+        "app.py",
+        "hw.py",
+        "firmware.py",
+        "pack.py",
+        "protocol.py",
+        "requirements.txt"
+    )) {
+        Copy-Item (Join-Path $srcGui $name) (Join-Path $dstGui $name) -Force
+    }
+    Copy-RawTree $HanDir (Join-Path $UploadDir "han")
+
+    $bypassRoot = Join-Path (Split-Path $SketchDir -Parent) "Touch_1pUPS_335_bypass"
+    $bypassUpload = Join-Path $bypassRoot "upload"
+    foreach ($name in @(
+        "withScreenSaver_Touch_1pUPS_335_bypass_flash.ino.bin",
+        "NoScreenSaver_Touch_1pUPS_335_bypass_flash.ino.bin"
+    )) {
+        $src = Join-Path $bypassUpload $name
+        if (Test-Path $src) {
+            Copy-ToUpload $src $name
+        }
+    }
+    $bypassHan = Join-Path $bypassRoot "han"
+    if (-not (Test-Path $bypassHan)) {
+        $bypassHan = Join-Path $bypassUpload "han"
+    }
+    if (Test-Path $bypassHan) {
+        Copy-RawTree $bypassHan (Join-Path $UploadDir "han_bypass")
+    }
+    Write-Host "synced firmware kit: $UploadDir"
+}
+
 function Show-Ports {
     Write-Host "=== serial ports ==="
     & $ArduinoCli board list
@@ -73,51 +125,77 @@ Write-Host "flavor:      $Flavor"
 Write-Host "libraries:   $LibDir"
 Write-Host "build:       $BuildDir"
 
-$compileArgs = @(
-    "compile",
-    "--fqbn", $Fqbn,
-    "--libraries", $LibDir,
-    "--build-path", $BuildDir,
-    "--warnings", "none"
-)
-if ($Flavor -eq "flash") {
-    $compileArgs += "--build-property"
-    $compileArgs += "compiler.cpp.extra_flags=-DUSE_SPI_FLASH"
-    $compileArgs += "--build-property"
-    $compileArgs += "compiler.c.extra_flags=-DUSE_SPI_FLASH"
-}
-if ($Flavor -eq "wire") {
-    $compileArgs += "--build-property"
-    $compileArgs += "compiler.cpp.extra_flags=-DSERIAL_WIRE_TEST"
-    $compileArgs += "--build-property"
-    $compileArgs += "compiler.c.extra_flags=-DSERIAL_WIRE_TEST"
+function Invoke-SketchCompile([string]$ExtraFlags, [string]$Label) {
+    $compileArgs = @(
+        "compile",
+        "--fqbn", $Fqbn,
+        "--libraries", $LibDir,
+        "--build-path", $BuildDir,
+        "--warnings", "none"
+    )
+    if (-not [string]::IsNullOrWhiteSpace($ExtraFlags)) {
+        $compileArgs += "--build-property"
+        $compileArgs += "compiler.cpp.extra_flags=$ExtraFlags"
+        $compileArgs += "--build-property"
+        $compileArgs += "compiler.c.extra_flags=$ExtraFlags"
+    }
+    Write-Host "compile $Label"
+    if ($ExtraFlags) { Write-Host "  flags: $ExtraFlags" }
+    & $ArduinoCli @compileArgs $SketchDir | Out-Host
+    if ($LASTEXITCODE -ne 0) {
+        throw "compile failed ($Label): exit $LASTEXITCODE"
+    }
+    $built = Join-Path $BuildDir $BinName
+    if (-not (Test-Path $built)) {
+        throw "bin not found: $built"
+    }
+    return ,$built
 }
 
-& $ArduinoCli @compileArgs $SketchDir
-
-if ($LASTEXITCODE -ne 0) {
-    throw "compile failed: exit $LASTEXITCODE"
-}
-
-$builtBin = Join-Path $BuildDir $BinName
-if (-not (Test-Path $builtBin)) {
-    throw "bin not found: $builtBin"
+function Copy-ToUpload([string]$SrcBin, [string]$DestName) {
+    $dest = Join-Path $UploadDir $DestName
+    Copy-Item $SrcBin $dest -Force
+    Write-Host "copied to:  $dest"
 }
 
 New-Item -ItemType Directory -Force -Path $UploadDir | Out-Null
-Copy-Item $builtBin (Join-Path $UploadDir $BinName) -Force
-Copy-Item $builtBin (Join-Path $UploadDir $FlavorBinName) -Force
-Write-Host ""
-Write-Host "OK compile: $builtBin"
-Write-Host "copied to:  $UploadDir\$BinName"
-Write-Host "copied to:  $UploadDir\$FlavorBinName"
+$SaverFlashBin = "withScreenSaver_${SketchName}_flash.ino.bin"
+$NoSaverFlashBin = "NoScreenSaver_${SketchName}_flash.ino.bin"
+
+if ($Flavor -eq "flash") {
+    $builtBin = Invoke-SketchCompile "-DUSE_SPI_FLASH" "flash + screensaver"
+    Copy-ToUpload $builtBin $SaverFlashBin
+    Copy-ToUpload $builtBin $FlavorBinName
+    Copy-ToUpload $builtBin $BinName
+    $builtBin = Invoke-SketchCompile "-DUSE_SPI_FLASH -DNO_SCREEN_SAVER" "flash + no screensaver"
+    Copy-ToUpload $builtBin $NoSaverFlashBin
+    Write-Host ""
+    Write-Host "OK compile flash (2 bins)"
+    Sync-FirmwareKit
+} elseif ($Flavor -eq "wire") {
+    $builtBin = Invoke-SketchCompile "-DSERIAL_WIRE_TEST" "wire"
+    Copy-ToUpload $builtBin $FlavorBinName
+    Copy-ToUpload $builtBin $BinName
+    Write-Host ""
+    Write-Host "OK compile: $builtBin"
+} else {
+    $builtBin = Invoke-SketchCompile "" "sd"
+    Copy-ToUpload $builtBin $FlavorBinName
+    Copy-ToUpload $builtBin $BinName
+    Write-Host ""
+    Write-Host "OK compile: $builtBin"
+}
 
 if ($Upload) {
     if (-not (Test-Path $Bossac)) {
         throw "bossac.exe not found: $Bossac"
     }
-    $uploadBin = Join-Path $UploadDir $BinName
-    Write-Host "upload: $Bossac --port=$Port -U false (Programming Port)"
+    if ($Flavor -eq "flash") {
+        $uploadBin = Join-Path $UploadDir $SaverFlashBin
+    } else {
+        $uploadBin = Join-Path $UploadDir $BinName
+    }
+    Write-Host "upload: $Bossac --port=$Port -U false $uploadBin"
     & $Bossac -i -d "--port=$Port" -U false -e -w -b -v $uploadBin -R
     if ($LASTEXITCODE -ne 0) {
         throw "upload failed: exit $LASTEXITCODE"
@@ -131,6 +209,7 @@ if ($Upload) {
         Write-Host "  2) 보드 리셋 (2.5초 HELLO)"
         Write-Host "  3) 폴더를 han\ 으로 지정 후 전체 전송"
         Write-Host "  이미지 전송 중에는 COM5 모니터를 열지 말 것."
+        Write-Host "  펌웨어 담당자: upload\upload.bat (이 폴더만 복사)"
     }
 }
 

@@ -54,8 +54,14 @@ bool SerialFlashUpload::readLine(Stream &s, char *buf, uint8_t bufLen, uint32_t 
       buf[n] = 0;
       return n > 0;
     }
+    /* 잡음·이전 명령 잔여를 버리고 C1DL 로 재동기화한다. */
+    if (n == 0 && c != 'C') {
+      continue;
+    }
     if (n < (uint8_t)(bufLen - 1)) {
       buf[n++] = c;
+    } else {
+      n = 0;
     }
   }
   buf[n] = 0;
@@ -154,10 +160,12 @@ static bool readExact(Stream &s, uint8_t *buf, uint32_t len, uint32_t idleMs) {
   uint32_t start = millis();
   while (got < len) {
     SerialFlashUpload_kick();
-    if (s.available() > 0) {
+    while (got < len && s.available() > 0) {
       buf[got++] = (uint8_t)s.read();
       start = millis();
-      continue;
+    }
+    if (got >= len) {
+      break;
     }
     if ((millis() - start) >= idleMs) {
       return false;
@@ -208,18 +216,17 @@ bool SerialFlashUpload::receivePack(Stream &s, GD25Q80 &flash, uint32_t size, ui
   s.println("C1DL GO");
   s.flush();
   dbgLine("C1DL GO");
-  delay(20);
-  drainRx(s);
+  /* drainRx 는 호스트가 이미 보낸 첫 페이지를 삼킬 수 있다. 짧게만 비운다. */
+  delay(30);
 
   uint32_t written = 0;
   uint32_t runCrc = 0;
   uint8_t pageBuf[GD25Q80::PAGE_SIZE];
-  uint32_t lastPing = millis();
 
   while (written < size) {
     uint32_t remain = size - written;
     uint16_t n = (remain > GD25Q80::PAGE_SIZE) ? GD25Q80::PAGE_SIZE : (uint16_t)remain;
-    if (!readExact(s, pageBuf, n, 2000)) {
+    if (!readExact(s, pageBuf, n, 8000)) {
       s.println("C1DL FAIL TO");
       s.flush();
       dbgLine("C1DL FAIL TO");
@@ -233,16 +240,17 @@ bool SerialFlashUpload::receivePack(Stream &s, GD25Q80 &flash, uint32_t size, ui
       return false;
     }
     written += n;
-    if ((millis() - lastPing) >= 400UL) {
-      lastPing = millis();
-      s.print("C1DL BUSY ");
-      s.println(written);
-      s.flush();
-    }
+    /* 호스트는 이 ACK 전에 다음 페이지를 보내지 않는다. SPI 기록 중 UART 오버런 방지. */
+    s.print("C1DL P ");
+    s.println(written);
+    s.flush();
   }
 
   if (runCrc != expectCrc) {
-    s.println("C1DL FAIL CRC");
+    s.print("C1DL FAIL CRC ");
+    s.print(runCrc);
+    s.print(" ");
+    s.println(expectCrc);
     s.flush();
     dbgLine("C1DL FAIL CRC");
     return false;
@@ -307,7 +315,7 @@ bool SerialFlashUpload::receivePut(Stream &s, GD25Q80 &flash, const char *path, 
   drainRx(s);
 
   static uint8_t fileBuf[PUT_MAX];
-  if (!readExact(s, fileBuf, size, 2000)) {
+  if (!readExact(s, fileBuf, size, 8000)) {
     s.println("C1DL FAIL TO");
     s.flush();
     dbgLine("C1DL FAIL TO");
@@ -375,12 +383,13 @@ void SerialFlashUpload::sendList(Stream &s, GD25Q80 &flash) {
 void SerialFlashUpload::session(Stream &s, GD25Q80 &flash) {
   char line[96];
   dbgLine("C1DL MODE");
+  delay(50);
   drainRx(s);
   while (true) {
     if (!s.available()) {
       continue;
     }
-    if (!readLine(s, line, sizeof(line), 5000)) {
+    if (!readLine(s, line, sizeof(line), 1500)) {
       continue;
     }
     uint8_t ln = (uint8_t)strlen(line);

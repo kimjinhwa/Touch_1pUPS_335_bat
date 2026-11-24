@@ -7,7 +7,7 @@
 /*
  * 이 스케치: Serial 115200 (PC COM5). 업로드 중에는 같은 포트에 로그/모니터 금지.
  * 명령은 ASCII 한 줄, 데이터는 길이만큼 바이너리.
- *   C1DL BEGIN <size> <crc32>  → GO 후 size 바이트 → DONE / FAIL CRC
+ *   C1DL BEGIN <size> <crc32>  → GO 후 256B마다 C1DL P <offset> → DONE / FAIL CRC
  *   C1DL PUT <path> <size> <crc32> → PUTGO 후 size 바이트 → PUTOK
  * readyWindowMs==0 이면 HELLO 대기에서 빠져나가지 않는다.
  *
