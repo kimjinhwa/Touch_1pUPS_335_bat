@@ -24,7 +24,6 @@ def collect_raws(folder: Path) -> list[tuple[str, Path]]:
     folder = folder.resolve()
     if not folder.is_dir():
         raise FileNotFoundError(f"폴더 없음: {folder}")
-    root_name = folder.name
     files: list[tuple[str, Path]] = []
     for path in sorted(folder.rglob("*")):
         if not path.is_file():
@@ -33,7 +32,8 @@ def collect_raws(folder: Path) -> list[tuple[str, Path]]:
         if path.suffix.lower() != ".raw":
             continue
         rel = path.relative_to(folder).as_posix()
-        stored = f"{root_name}/{rel}"
+        # 펌웨어는 항상 myFiles.load("han/..."). PC 폴더명(han_bypass, han_ess 등)은 키트 구분용.
+        stored = f"han/{rel}"
         stored = stored.rsplit(".", 1)[0] + ".RAW"
         if len(stored.encode("ascii", "replace")) >= PATH_SIZE:
             raise ValueError(f"경로가 너무 깁니다({PATH_SIZE - 1}): {stored}")

@@ -5,11 +5,13 @@ extern "C" void SerialFlashUpload_kick(void);
 GD25Q80::GD25Q80(uint8_t csPin)
   : _cs(csPin),
     _jedec(0),
+    _spiHz(SPI_HZ),
     _present(false),
-    _settings(4000000UL, MSBFIRST, SPI_MODE0) {
+    _settings(SPI_HZ, MSBFIRST, SPI_MODE0) {
 }
 
 bool GD25Q80::begin(uint32_t spiHz) {
+  _spiHz = spiHz;
   _settings = SPISettings(spiHz, MSBFIRST, SPI_MODE0);
   pinMode(_cs, OUTPUT);
   digitalWrite(_cs, HIGH);
@@ -56,7 +58,9 @@ void GD25Q80::dumpInfo(Stream &out) {
     out.print('0');
   }
   out.print(_jedec, HEX);
-  out.print("  ");
+  out.print(" SPI=");
+  out.print(_spiHz);
+  out.print("Hz  ");
   if (_present) {
     out.print("OK ");
     out.println(chipName());

@@ -32,12 +32,15 @@ public:
   static const uint32_t CAPACITY           = 0x100000UL;  /* 1MB */
   static const uint16_t PAGE_SIZE          = 256;
   static const uint32_t SECTOR_SIZE        = 4096;
+  /* SD SPI_HALF_SPEED 와 같음 (Due F_CPU/4 = 21 MHz). AT25SF081 0x03 최대 ~50 MHz. */
+  static const uint32_t SPI_HZ             = 21000000UL;
 
   explicit GD25Q80(uint8_t csPin = 78);
 
-  bool begin(uint32_t spiHz = 4000000UL);
+  bool begin(uint32_t spiHz = SPI_HZ);
   bool probe();
   void dumpInfo(Stream &out);
+  uint32_t spiHz() const { return _spiHz; }
 
   bool isPresent() const { return _present; }
   uint32_t jedecId() const { return _jedec; }
@@ -56,6 +59,7 @@ public:
 private:
   uint8_t _cs;
   uint32_t _jedec;
+  uint32_t _spiHz;
   bool _present;
   SPISettings _settings;
 

@@ -51,7 +51,7 @@ def _items_from_files(folder: Path, rels: list[str]) -> list[tuple[str, Path]]:
         src = folder / rel
         if not src.is_file():
             raise FileNotFoundError(str(src))
-        stored = f"{folder.name}/{Path(rel).as_posix()}"
+        stored = f"han/{Path(rel).as_posix()}"
         stored = stored.rsplit(".", 1)[0] + ".RAW"
         items.append((stored, src))
     return items
